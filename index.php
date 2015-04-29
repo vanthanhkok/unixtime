@@ -77,7 +77,7 @@
         <meta name="description" content="Tools dealing with unix timestamps">
         <meta name="author" content="Andrew Shell">
 
-        <link href="//netdna.bootstrapcdn.com/bootswatch/3.1.0/flatly/bootstrap.min.css" rel="stylesheet">
+        <link href="//netdna.bootstrapcdn.com/bootswatch/3.3.4/flatly/bootstrap.min.css" rel="stylesheet">
 
         <style type="text/css">
             html, body {
