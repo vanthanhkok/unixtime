@@ -67,6 +67,21 @@
     }
 
     $midnight = strtotime(date('Y-m-d') . ' 00:00:00');
+
+    function getT($tzstring)
+    {
+        $tz = new DateTimeZone($tzstring);
+        $ts = new DateTime('now', $tz);
+        return $ts->format('T');
+    }
+
+    $shortcuts = array(
+        'UTC',
+        'America/Los_Angeles',
+        'America/Denver',
+        'America/Chicago',
+        'America/New_York',
+    );
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -112,6 +127,12 @@
         <link rel="shortcut icon" href="/favicon.ico">
 
         <script type="text/javascript">
+        if (!Date.now) {
+            Date.now = function now() {
+                return new Date().getTime();
+            };
+        }
+
         var timezones = <?php echo json_encode($timezones); ?>;
         function assignTz2() {
             var i, tz2;
@@ -124,6 +145,29 @@
                 tz2 = timezones[tz][i];
                 etz2.options[etz2.options.length] = new Option(tz2, tz2, i===0, i===0);
             }
+        }
+
+        function assignTimezone(tzstring) {
+            var etz = document.getElementById("tz");
+            var etz2 = document.getElementById("tz2");
+            var tzparts = tzstring.split('/');
+
+            if (undefined === tzparts[1]) {
+                tzparts[1] = '';
+            }
+
+            etz.value = tzparts[0];
+            assignTz2()
+            etz2.value = tzparts[1];
+        }
+
+        function assignUnixtime(value) {
+            var eunixtime = document.getElementById('unixtime');
+            eunixtime.value = value;
+        }
+
+        function assignUnixtimeNow() {
+            assignUnixtime(Math.floor(Date.now() / 1000));
         }
         </script>
     </head>
@@ -149,6 +193,11 @@
                                 <option value="<?php echo $tz; ?>"<?php echo (0 == strcmp($_COOKIE['tz'], $tz) ? ' selected="selected"' : ''); ?>><?php echo htmlentities($tz, ENT_COMPAT, 'UTF-8'); ?></option>
                             <?php endforeach; ?>
                             </select>
+                            <span class="help-block">
+                                <?php foreach ($shortcuts as $tzstring): ?>
+                                <a href="javascript:assignTimezone('<?=$tzstring?>')"><?=getT($tzstring)?></a>
+                                <?php endforeach; ?>
+                            </span>
                         </div>
                         <div class="form-group col-xs-12 col-md-3">
                             <label for="tz2">&nbsp;</label>
@@ -183,13 +232,13 @@
                         <div class="col-xs-6 col-md-3">
                             <div class="form-group">
                                 <label>Midnight</label>
-                                <p class="form-control-static"><?php echo $midnight; ?></p>
+                                <p class="form-control-static" id="tzmidnight"><a href="javascript:assignUnixtime(<?php echo $midnight; ?>)"><?php echo $midnight; ?></a></p>
                             </div>
                         </div>
                         <div class="col-xs-6 col-md-3">
                             <div class="form-group">
                                 <label>Now</label>
-                                <p class="form-control-static"><?php echo time(); ?></p>
+                                <p class="form-control-static"><a href="javascript:assignUnixtimeNow()" id="tznow"><?php echo time(); ?></a></p>
                             </div>
                         </div>
                         <div class="col-xs-6 col-md-3">
@@ -216,5 +265,13 @@
             </div>
         </div>
 
+        <script type="text/javascript">
+            window.onload = function () {
+                var etznow = document.getElementById('tznow');
+                setInterval(function () {
+                    etznow.innerHTML = Math.floor(Date.now() / 1000);
+                }, 1000);
+            }
+        </script>
     </body>
 </html>
