@@ -4,21 +4,51 @@
     if (!empty($_POST['tz'])) {
         $_COOKIE['tz'] = $_POST['tz'];
     } elseif (empty($_COOKIE['tz'])) {
-        $_COOKIE['tz'] = 'America/Chicago';
+        $_COOKIE['tz'] = 'America';
     }
     $tz = $_COOKIE['tz'];
     setcookie("tz", $tz, $expires);
 
+    if (!empty($_POST['tz2'])) {
+        $_COOKIE['tz2'] = $_POST['tz2'];
+    } elseif (empty($_COOKIE['tz2'])) {
+        $_COOKIE['tz2'] = 'Chicago';
+    }
+    $tz2 = $_COOKIE['tz2'];
+    setcookie("tz2", $tz2, $expires);
+
     if (!empty($_POST['textform'])) {
         $_COOKIE['textform'] = $_POST['textform'];
     } elseif (empty($_COOKIE['textform'])) {
-        $_COOKIE['textform'] = 'Y-m-d H:i:s';
+        $_COOKIE['textform'] = 'Y-m-d H:i:s T';
     }
     $textform = $_COOKIE['textform'];
     setcookie("textform", $textform, $expires);
 
-    date_default_timezone_set($tz);
-    $timezones = DateTimeZone::listIdentifiers();
+    $rawTimezones = DateTimeZone::listIdentifiers();
+    $timezones = array();
+    foreach ($rawTimezones as $rawTimezone) {
+        $tzParts = explode('/', $rawTimezone);
+        if (empty($timezones[$tzParts[0]])) {
+            $timezones[$tzParts[0]] = array();
+        }
+        if (empty($tzParts[1])) {
+            $timezones[$tzParts[0]][] = '';
+        } else {
+            $timezones[$tzParts[0]][] = $tzParts[1];
+        }
+    }
+
+    if (empty($timezones[$tz])) {
+        $tz  = $_COOKIE['tz']  = 'America';
+        $tz2 = $_COOKIE['tz2'] = 'Chicago';
+    }
+
+    if (false === array_search($tz2, $timezones[$tz])) {
+        $tz2 = $_COOKIE['tz2'] = $timezones[$tz][0];
+    }
+
+    date_default_timezone_set($tz . (empty($tz2) ? '' : '/' . $tz2));
 
     if (empty($_POST['unixtime'])) {
         $_POST['unixtime']   = time();
@@ -47,7 +77,6 @@
         <meta name="description" content="Tools dealing with unix timestamps">
         <meta name="author" content="Andrew Shell">
 
-        <!-- Le styles -->
         <link href="//netdna.bootstrapcdn.com/bootswatch/3.1.0/flatly/bootstrap.min.css" rel="stylesheet">
 
         <style type="text/css">
@@ -76,11 +105,27 @@
 
         <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
         <!--[if lt IE 9]>
-          <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+          <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
         <![endif]-->
 
         <!-- Le fav and touch icons -->
         <link rel="shortcut icon" href="/favicon.ico">
+
+        <script type="text/javascript">
+        var timezones = <?php echo json_encode($timezones); ?>;
+        function assignTz2() {
+            var i, tz2;
+            var etz = document.getElementById("tz");
+            var etz2 = document.getElementById("tz2");
+            var tz = etz.options[etz.selectedIndex].value;
+
+            etz2.options.length=0;
+            for (i = 0; i < timezones[tz].length; i++) {
+                tz2 = timezones[tz][i];
+                etz2.options[etz2.options.length] = new Option(tz2, tz2, i===0, i===0);
+            }
+        }
+        </script>
     </head>
 
     <body>
@@ -97,11 +142,19 @@
                 <fieldset>
                     <legend>Settings</legend>
                     <div class="row">
-                        <div class="form-group col-xs-12 col-md-6">
+                        <div class="form-group col-xs-12 col-md-3">
                             <label for="tz">Timezone</label>
-                            <select name="tz" id="tz" class="form-control">
-                            <?php foreach ($timezones as $tz): ?>
+                            <select name="tz" id="tz" class="form-control" onchange="assignTz2()">
+                            <?php foreach (array_keys($timezones) as $tz): ?>
                                 <option value="<?php echo $tz; ?>"<?php echo (0 == strcmp($_COOKIE['tz'], $tz) ? ' selected="selected"' : ''); ?>><?php echo htmlentities($tz, ENT_COMPAT, 'UTF-8'); ?></option>
+                            <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group col-xs-12 col-md-3">
+                            <label for="tz2">&nbsp;</label>
+                            <select name="tz2" id="tz2" class="form-control">
+                            <?php foreach ($timezones[$_COOKIE['tz']] as $tz2): ?>
+                                <option value="<?php echo $tz2; ?>"<?php echo (0 == strcmp($_COOKIE['tz2'], $tz2) ? ' selected="selected"' : ''); ?>><?php echo htmlentities($tz2, ENT_COMPAT, 'UTF-8'); ?></option>
                             <?php endforeach; ?>
                             </select>
                         </div>
@@ -137,7 +190,8 @@
                             <div class="form-group">
                                 <label>Now</label>
                                 <p class="form-control-static"><?php echo time(); ?></p>
-                            </div>                        </div>
+                            </div>
+                        </div>
                         <div class="col-xs-6 col-md-3">
                             <input type="submit" name="tounixtime" class="btn btn-primary btn-block" value="Convert To Unixtime" />
                         </div>
